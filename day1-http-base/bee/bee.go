@@ -46,6 +46,9 @@ func (engine *Engine) Run(addr string) (err error) {
 	return http.ListenAndServe(addr, engine)
 }
 
+/*
+	在 go 中，实现了接口方法的 struct 都可以强制转换为接口类型
+*/
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	/*
 		解析请求的路径 查找路由映射表
@@ -55,6 +58,7 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if handler, ok := engine.router[key]; ok {
 		handler(w, req)
 	} else {
+		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "404 NOT FOUND: %s\n", req.URL)
 	}
 }
