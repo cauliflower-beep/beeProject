@@ -1,6 +1,6 @@
 module beeWeb/day1-http-base
 
-go 1.17
+go 1.19
 
 require bee v0.0.0
 

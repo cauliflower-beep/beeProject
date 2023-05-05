@@ -21,7 +21,7 @@ type Engine struct {
 	router map[string]HandlerFunc
 }
 
-// New is the constructor of bee.Engine
+// New bee.Engine构造器
 func New() *Engine {
 	return &Engine{router: make(map[string]HandlerFunc)}
 }
@@ -47,7 +47,7 @@ func (engine *Engine) Run(addr string) (err error) {
 }
 
 /*
-	在 go 中，实现了接口方法的 struct 都可以强制转换为接口类型
+在 go 中，实现了接口方法的 struct 都可以强制转换为接口类型
 */
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	/*

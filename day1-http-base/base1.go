@@ -32,12 +32,12 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 		Fprintf 把格式字符串输出到指定文件设备中，主要用于文件操作，格式化输出到一个stream 通常是到文件
 		%q 以golang中字面值的形式打印
 	*/
-	fmt.Fprintf(w, "URL.Path = %q\n", req.URL.Path)
+	_, _ = fmt.Fprintf(w, "URL.Path = %q\n", req.URL.Path)
 }
 
 // helloHandler echoes r.URL.Header
 func helloHandler(w http.ResponseWriter, req *http.Request) {
 	for k, v := range req.Header {
-		fmt.Fprintf(w, "Header[%q] = %q\n", k, v)
+		_, _ = fmt.Fprintf(w, "Header[%q] = %q\n", k, v)
 	}
 }
