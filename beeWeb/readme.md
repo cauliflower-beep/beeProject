@@ -310,6 +310,8 @@ curl http://localhost:9999/world
 
 开发一个框架，俗称“造轮子”，都是基于原始的标准库扩展而来。所以首先我们要对标准库非常熟悉，并且标准库满足不了我们的常用需求。
 
+这节课最大的设计是实现了engine结构体，接管所有的http请求并处理。
+
 ## Day2 上下文Context
 
 原文地址：[上下文设计(Context)](https://geektutu.com/post/gee-day2.html)
@@ -326,7 +328,7 @@ curl http://localhost:9999/world
 
 ```go
 func main() {
-	r := Bee.New()
+	r := bee.New()
 	r.GET("/", func(c *bee.Context) {
 		c.HTML(http.StatusOK, "<h1>Hello Bee</h1>")
 	})
@@ -350,17 +352,19 @@ func main() {
 
 其次，`bee.Context`封装了`HTML/String/JSON`函数，能够快速构造HTTP响应。
 
-## 设计Context
+### 设计Context
 
-### 必要性
+#### 必要性
 
-1. 对Web服务来说，无非是根据请求`*http.Request`，构造响应`http.ResponseWriter`。但是这两个对象提供的接口粒度太细，比如我们要构造一个完整的响应，需要考虑消息头(Header)和消息体(Body)，而 Header 包含了状态码(StatusCode)，消息类型(ContentType)等几乎每次请求都需要设置的信息。因此，如果不进行有效的封装，那么框架的用户将需要写大量重复，繁杂的代码，而且容易出错。针对常用场景，能够高效地构造出 HTTP 响应是一个好的框架必须考虑的点。
+Web服务的**本质**，无非是根据请求`*http.Request`，构造响应`http.ResponseWriter`。
 
-用返回 JSON 数据作比较，感受下封装前后的差距。
+但是这两个对象提供的接口粒度太细，比如我们要构造一个完整的响应，需要考虑**消息头**(Header)和**消息体**(Body)，而 Header 包含了**状态码**(StatusCode)，**消息类型**(ContentType)等几乎每次请求都需要设置的信息。因此，如果不进行有效的封装，那么框架的用户将需要写大量重复，繁杂的代码，还容易出错。
 
-封装前
+针对常用场景，能够**高效地构造出 HTTP 响应**是一个好的框架必须考虑的点。用返回 JSON 数据作比较，感受下封装前后的差距：
 
-```
+> 封装前
+
+```go
 obj = map[string]interface{}{
     "name": "geektutu",
     "password": "1234",
@@ -373,22 +377,26 @@ if err := encoder.Encode(obj); err != nil {
 }
 ```
 
-VS 封装后：
+> 封装后：
 
-```
+```go
 c.JSON(http.StatusOK, gee.H{
     "username": c.PostForm("username"),
     "password": c.PostForm("password"),
 })
 ```
 
-1. 针对使用场景，封装`*http.Request`和`http.ResponseWriter`的方法，简化相关接口的调用，只是设计 Context 的原因之一。对于框架来说，还需要支撑额外的功能。例如，将来解析动态路由`/hello/:name`，参数`:name`的值放在哪呢？再比如，框架需要支持中间件，那中间件产生的信息放在哪呢？Context 随着每一个请求的出现而产生，请求的结束而销毁，和当前请求强相关的信息都应由 Context 承载。因此，设计 Context 结构，扩展性和复杂性留在了内部，而对外简化了接口。路由的处理函数，以及将要实现的中间件，参数都统一使用 Context 实例， Context 就像一次会话的百宝箱，可以找到任何东西。
+针对使用场景，封装`*http.Request`和`http.ResponseWriter`的方法，简化相关接口的调用，只是设计 Context 的原因之一。
 
-### 具体实现
+对于框架来说，还需要支撑**额外的功能**。例如，将来解析动态路由`/hello/:name`，参数`:name`的值放在哪呢？再比如，框架需要支持中间件，那中间件产生的信息放在哪呢？
 
-[day2-context/gee/context.go](https://github.com/geektutu/7days-golang/tree/master/gee-web/day2-context)
+Context **随着每一个请求的出现而产生，请求的结束而销毁**。和当前请求强相关的信息都应由 Context 承载。
 
-```
+因此，设计 Context 结构，扩展性和复杂性留在了内部，而对外简化了接口。路由的处理函数，以及将要实现的中间件，参数都统一使用 Context 实例， Context 就像一次会话的百宝箱，可以找到任何东西。
+
+#### 具体实现
+
+```go
 type H map[string]interface{}
 
 type Context struct {
@@ -455,18 +463,16 @@ func (c *Context) HTML(code int, html string) {
 }
 ```
 
-- 代码最开头，给`map[string]interface{}`起了一个别名`gee.H`，构建JSON数据时，显得更简洁。
+- 代码最开头，给`map[string]interface{}`起了一个别名`bee.H`，构建JSON数据时，显得更简洁。
 - `Context`目前只包含了`http.ResponseWriter`和`*http.Request`，另外提供了对 Method 和 Path 这两个常用属性的直接访问。
 - 提供了访问Query和PostForm参数的方法。
 - 提供了快速构造String/Data/JSON/HTML响应的方法。
 
-## 路由(Router)
+### 路由(Router)
 
-我们将和路由相关的方法和结构提取了出来，放到了一个新的文件中`router.go`，方便我们下一次对 router 的功能进行增强，例如提供动态路由的支持。 router 的 handle 方法作了一个细微的调整，即 handler 的参数，变成了 Context。
+我们将和路由相关的方法和结构提取出来，放到了一个新的文件中`router.go`，方便我们下一次对 router 的功能进行增强，例如提供动态路由的支持。 router 的 handle 方法作一个细微的调整，即 handler 的参数，变成了 Context。
 
-[day2-context/gee/router.go](https://github.com/geektutu/7days-golang/tree/master/gee-web/day2-context)
-
-```
+```go
 type router struct {
 	handlers map[string]HandlerFunc
 }
@@ -491,12 +497,10 @@ func (r *router) handle(c *Context) {
 }
 ```
 
-## 框架入口
+### 框架入口
 
-[day2-context/gee/gee.go](https://github.com/geektutu/7days-golang/tree/master/gee-web/day2-context)
-
-```
-// HandlerFunc defines the request handler used by gee
+```go
+// HandlerFunc defines the request handler used by bee
 type HandlerFunc func(*Context)
 
 // Engine implement the interface of ServeHTTP
@@ -534,7 +538,9 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 ```
 
-将`router`相关的代码独立后，`gee.go`简单了不少。最重要的还是通过实现了 ServeHTTP 接口，接管了所有的 HTTP 请求。相比第一天的代码，这个方法也有细微的调整，在调用 router.handle 之前，构造了一个 Context 对象。这个对象目前还非常简单，仅仅是包装了原来的两个参数，之后我们会慢慢地给Context插上翅膀。
+将`router`相关的代码独立后，`bee.go`简单了不少。最重要的还是通过实现 ServeHTTP 接口，接管了所有的 HTTP 请求。
+
+相比第一天的代码，这个方法也有细微的调整，在调用 router.handle 之前，构造了一个 Context 对象。这个对象目前还非常简单，仅仅是包装了原来的两个参数，之后我们会慢慢地给Context插上翅膀。
 
 如何使用，`main.go`一开始就已经亮相了。运行`go run main.go`，借助 curl ，一起看一看今天的成果吧。
 
@@ -555,6 +561,12 @@ $ curl "http://localhost:9999/login" -X POST -d 'username=geektutu&password=1234
 $ curl "http://localhost:9999/xxx"
 404 NOT FOUND: /xxx
 ```
+
+### 自我总结
+
+本文探讨了封装context的必要性，一是可以简化重复代码，把复杂性留在内部，对外暴露简单易用的接口；二是承载某次会话过程中所有的信息，方便后续使用。
+
+另外还抽离了路由模块，方便后续对路由功能进行扩展。
 
 - 第三天：[Trie树路由(Router)](https://geektutu.com/post/gee-day3.html)，[Code - Github](https://github.com/geektutu/7days-golang/tree/master/gee-web/day3-router)
 - 第四天：[分组控制(Group)](https://geektutu.com/post/gee-day4.html)，[Code - Github](https://github.com/geektutu/7days-golang/tree/master/gee-web/day4-group)
