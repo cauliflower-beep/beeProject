@@ -20,10 +20,7 @@ func newRouter() *router {
 	}
 }
 
-// parsePattern
-//  @Description: only one * is allowed
-//  @param pattern
-//  @return []string
+// parsePattern 解析路径 返回parts列表 其中通配符 * 只能出现一次
 func parsePattern(pattern string) []string {
 	vs := strings.Split(pattern, "/")
 
