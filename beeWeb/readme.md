@@ -175,15 +175,15 @@ func main() {
 
 代码的运行结果与之前的是一致的。
 
-### Gee框架的雏形
+### Bee框架的雏形
 
 我们接下来重新组织上面的代码，搭建出整个框架的雏形。
 
 最终的代码目录结构是这样的。
 
 ```go
-gee/
-  |--gee.go
+bee/
+  |--bee.go
   |--go.mod
 main.go
 go.mod
@@ -212,11 +212,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"gee"
+	"bee"
 )
 
 func main() {
-	r := gee.New()
+	r := bee.New()
 	r.GET("/", func(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "URL.Path = %q\n", req.URL.Path)
 	})
@@ -380,7 +380,7 @@ if err := encoder.Encode(obj); err != nil {
 > 封装后：
 
 ```go
-c.JSON(http.StatusOK, gee.H{
+c.JSON(http.StatusOK, bee.H{
     "username": c.PostForm("username"),
     "password": c.PostForm("password"),
 })
@@ -508,7 +508,7 @@ type Engine struct {
 	router *router
 }
 
-// New is the constructor of gee.Engine
+// New is the constructor of bee.Engine
 func New() *Engine {
 	return &Engine{router: newRouter()}
 }
@@ -550,13 +550,13 @@ HTTP/1.1 200 OK
 Date: Mon, 12 Aug 2019 16:52:52 GMT
 Content-Length: 18
 Content-Type: text/html; charset=utf-8
-<h1>Hello Gee</h1>
+<h1>Hello bee</h1>
 
-$ curl "http://localhost:9999/hello?name=geektutu"
-hello geektutu, you're at /hello
+$ curl "http://localhost:9999/hello?name=beektutu"
+hello beektutu, you're at /hello
 
-$ curl "http://localhost:9999/login" -X POST -d 'username=geektutu&password=1234'
-{"password":"1234","username":"geektutu"}
+$ curl "http://localhost:9999/login" -X POST -d 'username=beektutu&password=1234'
+{"password":"1234","username":"beektutu"}
 
 $ curl "http://localhost:9999/xxx"
 404 NOT FOUND: /xxx
@@ -570,7 +570,7 @@ $ curl "http://localhost:9999/xxx"
 
 ## Day3 前缀树路由
 
-原文链接：[7天用Go从零实现Web框架Gee教程系列](https://geektutu.com/post/gee-day3.html)
+原文链接：[Trie树路由(Router)](https://geektutu.com/post/gee-day3.html)
 
 本文内容：
 
@@ -720,7 +720,7 @@ Trie 树的插入与查找都实现了，接下来我们将 Trie 树应用到路
 
 我们使用 roots 来存储每种请求方式的Trie 树根节点。使用 handlers 存储每种请求方式的 HandlerFunc 。
 
-getRoute 函数中，还解析了`:`和`*`两种匹配符的参数，返回一个 map 。例如`/p/go/doc`匹配到`/p/:lang/doc`，解析结果为：`{lang: "go"}`，`/static/css/geektutu.css`匹配到`/static/*filepath`，解析结果为`{filepath: "css/geektutu.css"}`。
+getRoute 函数中，还解析了`:`和`*`两种匹配符的参数，返回一个 map 。例如`/p/go/doc`匹配到`/p/:lang/doc`，解析结果为：`{lang: "go"}`，`/static/css/beektutu.css`匹配到`/static/*filepath`，解析结果为`{filepath: "css/beektutu.css"}`。
 
 ```go
 type router struct {
@@ -862,7 +862,7 @@ func TestParsePattern(t *testing.T) {
 
 func TestGetRoute(t *testing.T) {
 	r := newTestRouter()
-	n, ps := r.getRoute("GET", "/hello/geektutu")
+	n, ps := r.getRoute("GET", "/hello/beektutu")
 
 	if n == nil {
 		t.Fatal("nil shouldn't be returned")
@@ -872,8 +872,8 @@ func TestGetRoute(t *testing.T) {
 		t.Fatal("should match /hello/:name")
 	}
 
-	if ps["name"] != "geektutu" {
-		t.Fatal("name should be equal to 'geektutu'")
+	if ps["name"] != "beektutu" {
+		t.Fatal("name should be equal to 'beektutu'")
 	}
 
 	fmt.Printf("matched path: %s, params['name']: %s\n", n.pattern, ps["name"])
@@ -887,23 +887,23 @@ func TestGetRoute(t *testing.T) {
 
 ```go
 func main() {
-	r := gee.New()
-	r.GET("/", func(c *gee.Context) {
-		c.HTML(http.StatusOK, "<h1>Hello Gee</h1>")
+	r := bee.New()
+	r.GET("/", func(c *bee.Context) {
+		c.HTML(http.StatusOK, "<h1>Hello bee</h1>")
 	})
 
-	r.GET("/hello", func(c *gee.Context) {
-		// expect /hello?name=geektutu
+	r.GET("/hello", func(c *bee.Context) {
+		// expect /hello?name=beektutu
 		c.String(http.StatusOK, "hello %s, you're at %s\n", c.Query("name"), c.Path)
 	})
 
-	r.GET("/hello/:name", func(c *gee.Context) {
-		// expect /hello/geektutu
+	r.GET("/hello/:name", func(c *bee.Context) {
+		// expect /hello/beektutu
 		c.String(http.StatusOK, "hello %s, you're at %s\n", c.Param("name"), c.Path)
 	})
 
-	r.GET("/assets/*filepath", func(c *gee.Context) {
-		c.JSON(http.StatusOK, gee.H{"filepath": c.Param("filepath")})
+	r.GET("/assets/*filepath", func(c *bee.Context) {
+		c.JSON(http.StatusOK, bee.H{"filepath": c.Param("filepath")})
 	})
 
 	r.Run(":9999")
@@ -913,11 +913,11 @@ func main() {
 使用`curl`工具，测试结果。
 
 ```go
-$ curl "http://localhost:9999/hello/geektutu"
-hello geektutu, you're at /hello/geektutu
+$ curl "http://localhost:9999/hello/beektutu"
+hello beektutu, you're at /hello/beektutu
 
-$ curl "http://localhost:9999/assets/css/geektutu.css"
-{"filepath":"css/geektutu.css"}
+$ curl "http://localhost:9999/assets/css/beektutu.css"
+{"filepath":"css/beektutu.css"}
 ```
 
 ### 自我总结
@@ -927,8 +927,155 @@ $ curl "http://localhost:9999/assets/css/geektutu.css"
 而是应该想，我怎么使用这个框架开发web服务？我是不是需要框架给我提供增加路由的功能？另外增加路由之后，框架是不是可以自动帮我匹配路由？
 从这个角度出发，就有了开发方向了。
 
-- 第三天：[Trie树路由(Router)](https://geektutu.com/post/gee-day3.html)，[Code - Github](https://github.com/geektutu/7days-golang/tree/master/gee-web/day3-router)
-- 第四天：[分组控制(Group)](https://geektutu.com/post/gee-day4.html)，[Code - Github](https://github.com/geektutu/7days-golang/tree/master/gee-web/day4-group)
+## Day4 分组控制Group
+
+原文链接：[分组控制(Group)](https://geektutu.com/post/gee-day4.html)
+
+本文内容：实现路由分组控制(Route Group Control)
+
+### 分组的意义
+
+**分组控制**(Group Control)是 Web 框架应提供的基础功能之一。所谓分组，是指路由的分组。如果没有路由分组，我们需要针对每一个路由进行控制。但是真实的业务场景中，往往某一组路由需要相似的处理。例如：
+
+- 以`/post`开头的路由匿名可访问。
+- 以`/admin`开头的路由需要鉴权。
+- 以`/api`开头的路由是 RESTful 接口，可以对接第三方平台，需要三方平台鉴权。
+
+大部分情况下的路由分组，是以相同的前缀来区分的。因此，我们今天实现的分组控制也是**以前缀来区分**，并且**支持分组的嵌套**。例如`/post`是一个分组，`/post/a`和`/post/b`可以是该分组下的子分组。作用在`/post`分组上的中间件(middleware)，也都会作用在子分组，子分组还可以应用自己特有的中间件。
+
+中间件可以给框架提供无限的扩展能力，应用在分组上，可以使得分组控制的收益更为明显，而不是共享相同的路由前缀这么简单。例如`/admin`的分组，可以应用鉴权中间件；`/`分组应用日志中间件，`/`是默认的最顶层的分组，也就意味着给所有的路由，即整个框架增加了记录日志的能力。
+
+提供扩展能力支持中间件的内容，我们将在下一节当中介绍。
+
+### 分组嵌套
+
+一个 Group 对象需要具备哪些属性呢？
+
+首先是**前缀(prefix)**，比如`/`，或者`/api`；其次要支持分组嵌套，那么需要知道**当前分组的父亲(parent)**是谁；当然了，按照我们一开始的分析，中间件是应用在分组上的，那还需要存储应用在该分组上的**中间件(middlewares)**；最后，还记得，我们之前调用函数`(*Engine).addRoute()`来映射所有的路由规则和 Handler 。如果Group对象需要直接映射路由规则的话，比如我们想在使用框架时，这么调用：
+
+```go
+r := bee.New()
+v1 := r.Group("/v1")
+v1.GET("/", func(c *bee.Context) {
+	c.HTML(http.StatusOK, "<h1>Hello bee</h1>")
+})
+```
+
+那么Group对象，还需要有访问`Router`的能力，为了方便，我们可以在Group中，保存一个指针，指向`Engine`，整个框架的所有资源都是由`Engine`统一协调的，那么就可以通过`Engine`间接地访问各种接口了。
+
+所以，最后的 Group 的定义是这样的：
+
+```go
+RouterGroup struct {
+	prefix      string // 前缀
+	middlewares []HandlerFunc // 支持中间件
+	parent      *RouterGroup  // 支持嵌套
+	engine      *Engine       // 共享 Engine 实例，具备访问router的能力
+}
+```
+
+我们还可以进一步地抽象，将`Engine`作为最顶层的分组，也就是说`Engine`拥有`RouterGroup`所有的能力。
+
+```go
+Engine struct {
+	*RouterGroup
+	router *router
+	groups []*RouterGroup // 存储所有分组
+}
+```
+
+那我们就可以将和路由有关的函数，都交给`RouterGroup`实现了。
+
+```go
+// New is the constructor of bee.Engine
+func New() *Engine {
+	engine := &Engine{router: newRouter()}
+	engine.RouterGroup = &RouterGroup{engine: engine}
+	engine.groups = []*RouterGroup{engine.RouterGroup}
+	return engine
+}
+
+// Group 创建一个新的路由分组
+func (group *RouterGroup) Group(prefix string) *RouterGroup {
+	engine := group.engine
+	newGroup := &RouterGroup{
+		prefix: group.prefix + prefix,
+		parent: group,
+		engine: engine, // 所有的路由分组共享同一个engine实例
+	}
+	engine.groups = append(engine.groups, newGroup)
+	return newGroup
+}
+
+func (group *RouterGroup) addRoute(method string, comp string, handler HandlerFunc) {
+	pattern := group.prefix + comp
+	log.Printf("Route %4s - %s", method, pattern)
+	group.engine.router.addRoute(method, pattern, handler)
+}
+
+// GET defines the method to add GET request
+func (group *RouterGroup) GET(pattern string, handler HandlerFunc) {
+	group.addRoute("GET", pattern, handler)
+}
+
+// POST defines the method to add POST request
+func (group *RouterGroup) POST(pattern string, handler HandlerFunc) {
+	group.addRoute("POST", pattern, handler)
+}
+```
+
+可以仔细观察下`addRoute`函数，调用了`group.engine.router.addRoute`来实现了路由的映射。由于`Engine`从某种意义上继承了`RouterGroup`的所有属性和方法，因为 (*Engine).engine 是指向自己的。这样实现，我们既可以像原来一样添加路由，也可以通过分组添加路由。
+
+### 使用 Demo
+
+测试框架的Demo就可以这样写了：
+
+```go
+func main() {
+	r := bee.New()
+	r.GET("/index", func(c *bee.Context) {
+		c.HTML(http.StatusOK, "<h1>Index Page</h1>")
+	})
+	v1 := r.Group("/v1")
+	{
+		v1.GET("/", func(c *bee.Context) {
+			c.HTML(http.StatusOK, "<h1>Hello bee</h1>")
+		})
+
+		v1.GET("/hello", func(c *bee.Context) {
+			// expect /hello?name=beektutu
+			c.String(http.StatusOK, "hello %s, you're at %s\n", c.Query("name"), c.Path)
+		})
+	}
+	v2 := r.Group("/v2")
+	{
+		v2.GET("/hello/:name", func(c *bee.Context) {
+			// expect /hello/beektutu
+			c.String(http.StatusOK, "hello %s, you're at %s\n", c.Param("name"), c.Path)
+		})
+		v2.POST("/login", func(c *bee.Context) {
+			c.JSON(http.StatusOK, bee.H{
+				"username": c.PostForm("username"),
+				"password": c.PostForm("password"),
+			})
+		})
+
+	}
+
+	r.Run(":9999")
+}
+```
+
+通过 curl 简单测试：
+
+```go
+$ curl "http://localhost:9999/v1/hello?name=beektutu"
+hello beektutu, you're at /v1/hello
+
+$ curl "http://localhost:9999/v2/hello/beektutu"
+hello beektutu, you're at /hello/beektutu
+```
+
 - 第五天：[中间件(Middleware)](https://geektutu.com/post/gee-day5.html)，[Code - Github](https://github.com/geektutu/7days-golang/tree/master/gee-web/day5-middleware)
 - 第六天：[HTML模板(Template)](https://geektutu.com/post/gee-day6.html)，[Code - Github](https://github.com/geektutu/7days-golang/tree/master/gee-web/day6-template)
 - 第七天：[错误恢复(Panic Recover)](https://geektutu.com/post/gee-day7.html)，[Code - Github](https://github.com/geektutu/7days-golang/tree/master/gee-web/day7-panic-recover)
