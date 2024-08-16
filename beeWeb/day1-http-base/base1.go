@@ -8,7 +8,7 @@ import (
 
 func main() {
 	/*
-		此时, 我们调用 http.HandleFunc 实现了路由和Handler的映射，但只能针对具体的路由(静态)写处理逻辑
+		调用 http.HandleFunc 实现路由和Handler的映射，但只能针对具体的路由(静态)写处理逻辑
 	*/
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/hello", helloHandler)

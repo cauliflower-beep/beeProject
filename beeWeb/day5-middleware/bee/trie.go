@@ -5,15 +5,23 @@ import (
 	"strings"
 )
 
+/*
+	前缀树(Trie树)是最常用来实现动态路由的一种数据结构
+	每一个节点的所有子节点都拥有相同的前缀
+*/
+
 type node struct {
 	pattern  string  // 待匹配路由，例如 /p/:lang 可以匹配/p/c/doc 和 /p/go/doc
-	part     string  // 当前节点的路径段，例如 :lang
+	part     string  // 路由中的一部分，例如 :lang
 	children []*node // 子节点，例如 [doc,tutorial,intro]
-
-	isWild bool // 是否模糊匹配，part含有 : 或 * 时为true
+	/*
+		与普通的树不同，新加的isWild字段是实现动态路由匹配的关键
+		即当我们匹配 /p/go/doc/这个路由时，第一层节点，p精准匹配到了p，第二层节点，go模糊匹配到:lang，那么将会把lang这个参数赋值为go，继续下一层匹配。
+	*/
+	isWild bool // 是否精确匹配，part含有 : 或 * 时为true
 }
 
-// matchChild 第一个匹配成功的节点，用于插入
+// 第一个匹配成功的节点，用于插入
 func (n *node) matchChild(part string) *node {
 	for _, child := range n.children {
 		if child.part == part || child.isWild {
@@ -34,7 +42,12 @@ func (n *node) matchChildren(part string) []*node {
 	return nodes
 }
 
-// 当前节点的高度， 从根节点算起
+/*
+	对于路由来说，最重要的就是注册与匹配了
+	开发服务时，注册路由规则，映射handler；
+	访问服务时，匹配路由规则，查找到对应的handler
+	因此，Trie树需要支持节点的插入与查询。
+*/
 func (n *node) insert(pattern string, parts []string, height int) {
 	if len(parts) == height {
 		n.pattern = pattern

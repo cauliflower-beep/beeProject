@@ -16,8 +16,17 @@ type Context struct {
 	// request info 提供对 Path Method 这两个常用属性的直接访问
 	Path   string
 	Method string
+	/*
+		在 HandlerFunc 中，希望能够访问到解析的参数
+		因此，需要对 Context 对象增加一个属性和方法，来提供对路由参数的访问。
+		我们将解析后的参数存储到Params中，通过c.Param("lang")的方式获取到对应的值。
+	*/
+	Params map[string]string
 	// response info
 	StatusCode int
+	// middleware
+	handlers []HandlerFunc
+	index    int
 }
 
 func newContext(w http.ResponseWriter, req *http.Request) *Context {
@@ -26,6 +35,7 @@ func newContext(w http.ResponseWriter, req *http.Request) *Context {
 		Req:    req,
 		Path:   req.URL.Path,
 		Method: req.Method,
+		index:  -1,
 	}
 }
 
@@ -41,28 +51,23 @@ func (c *Context) Query(key string) string {
 
 func (c *Context) Status(code int) {
 	c.StatusCode = code
-	// 设置http回包数据中的响应行
 	c.Writer.WriteHeader(code)
 }
 
 func (c *Context) SetHeader(key string, value string) {
-	// 设置http回包数据中的响应头
 	c.Writer.Header().Set(key, value)
 }
 
 /*------快速构造响应-------*/
 func (c *Context) String(code int, format string, values ...interface{}) {
-	// 注意调用顺序，必须是 Header().Set -> WriteHeader -> Write
 	c.SetHeader("Content-Type", "text/plain")
 	c.Status(code)
-	// 设置http回包数据中的响应体
 	c.Writer.Write([]byte(fmt.Sprintf(format, values...)))
 }
 
 func (c *Context) JSON(code int, obj interface{}) {
 	c.SetHeader("Content-Type", "application/json")
 	c.Status(code)
-	// 创建一个json编码器，将数据编码并写入c.Writer
 	encoder := json.NewEncoder(c.Writer)
 	if err := encoder.Encode(obj); err != nil {
 		http.Error(c.Writer, err.Error(), 500)
@@ -78,4 +83,20 @@ func (c *Context) HTML(code int, html string) {
 	c.SetHeader("Content-Type", "text/html")
 	c.Status(code)
 	c.Writer.Write([]byte(html))
+}
+
+/*--------访问路由参数------------*/
+func (c *Context) Param(key string) string {
+	value, _ := c.Params[key]
+	return value
+}
+
+/*--------中间件-----------------*/
+
+func (c *Context) Next() {
+	c.index++
+	s := len(c.handlers)
+	for ; c.index < s; c.index++ {
+		c.handlers[c.index](c)
+	}
 }
